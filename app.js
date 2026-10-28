@@ -130,7 +130,7 @@ function newKit() {
   for (let v = 0; v < 6; v++) if (!locked[v]) newVoice(v);
   kitName = alienName(); kitChanged();
 }
-function kitChanged() { sendKit(); drawDrums(); $('kit-name').textContent = kitName; drawSaved(); }
+function kitChanged() { sendKit(); drawDrums(); resetMacros(); $('kit-name').textContent = kitName; drawSaved(); }
 function useKit(kit, name) {
   remember();
   for (let p = 0; p < NPAR; p++) values[p] = kit[p] || 0;
@@ -151,29 +151,100 @@ function alienName() {
   return alienWord();
 }
 
-// ---- drum rows: tap the name to hear it; new, alter and lock per voice ----
+// ---- drum rows: tap the name to hear it; new, alter and lock per voice, and pitch, decay and filter faders ----
+// each fader is one LXR-02 parameter, so saves, .snd and exports carry it
+const n1 = (v) => v + 1;
+const VOICE_PAR = {
+  pitch: (v) => PAR['COARSE' + n1(v)],
+  decay: (v) => (v === 5 ? PAR.VELOD6_CLOSED : PAR['VELOD' + n1(v)]),
+  filter: (v) => PAR['FILTER_FREQ_' + n1(v)],
+  drive: (v) => [PAR.DRIVE1, PAR.DRIVE2, PAR.DRIVE3, PAR.SNARE_DISTORTION, PAR.CYMBAL_DISTORTION, PAR.HAT_DISTORTION][v],
+};
+const FADERS = ['pitch', 'decay', 'filter'];
+const trig = (v) => send({ type: 'trig', voice: v, vel: 110 });
+// one undo step per drag, not per movement
+let gesture = false;
+const startGesture = () => { if (!gesture) { gesture = true; remember(); } };
+const endGesture = () => { gesture = false; };
+// a fader's value; the hihat's decay also moves its open decay by the same amount
+function setPar(v, kind, x) {
+  const par = VOICE_PAR[kind](v), old = values[par];
+  values[par] = Math.max(0, Math.min(parMax(par), Math.round(x)));
+  if (kind === 'decay' && v === 5) values[PAR.VELOD6_OPEN] = Math.max(0, Math.min(127, values[PAR.VELOD6_OPEN] + values[par] - old));
+}
 function drawDrums() {
   const box = $('drums');
   if (!box.children.length) DRUMS.forEach((d, v) => {
-    const row = document.createElement('div'); row.className = 'drum';
-    row.innerHTML = `<button class="pad" type="button">${d}<small></small></button><button type="button">new</button><button type="button">alter</button><button class="lock" type="button">lock</button>`;
-    const [pad, nw, alt, lock] = row.children;
+    const voice = document.createElement('div'); voice.className = 'voice';
+    voice.innerHTML = `<div class="drum"><button class="pad" type="button">${d}<small></small></button><button type="button">new</button><button type="button">alter</button><button class="lock" type="button">lock</button></div>`
+      + `<div class="faders">${FADERS.map((k) => `<label>${k} <output></output><input type="range" min="0" max="127" data-k="${k}" aria-label="${d} ${k}"></label>`).join('')}</div>`;
+    const [pad, nw, alt, lock] = voice.firstChild.children;
     pad.dataset.key = v + 1; pad.title = `Play ${d} (${v + 1})`;
-    pad.addEventListener('pointerdown', async () => { await startAudio(); send({ type: 'trig', voice: v, vel: 110 }); flash(v); });
-    nw.addEventListener('click', async () => { await startAudio(); remember(); newVoice(v); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
-    alt.addEventListener('click', async () => { await startAudio(); remember(); varyVoice(v, 0.1); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
+    pad.addEventListener('pointerdown', async () => { await startAudio(); trig(v); flash(v); });
+    nw.addEventListener('click', async () => { await startAudio(); remember(); newVoice(v); kitChanged(); trig(v); });
+    alt.addEventListener('click', async () => { await startAudio(); remember(); varyVoice(v, 0.1); kitChanged(); trig(v); });
     lock.addEventListener('click', () => { locked[v] = !locked[v]; drawDrums(); });
-    box.append(row);
+    for (const r of voice.querySelectorAll('input')) {
+      r.addEventListener('input', () => { startGesture(); setPar(v, r.dataset.k, Number(r.value)); sendKit(); drawFaders(); });
+      r.addEventListener('change', async () => { endGesture(); drawSaved(); await startAudio(); if (!playing) trig(v); });
+    }
+    box.append(voice);
   });
-  [...box.children].forEach((row, v) => {
-    row.querySelector('small').textContent = `from ${from[v]}`;
-    row.querySelector('.lock').classList.toggle('on', locked[v]);
+  [...box.children].forEach((voice, v) => {
+    voice.querySelector('small').textContent = `from ${from[v]}`;
+    voice.querySelector('.lock').classList.toggle('on', locked[v]);
+  });
+  drawFaders();
+}
+function drawFaders() {
+  [...$('drums').children].forEach((voice, v) => {
+    for (const r of voice.querySelectorAll('input')) {
+      const par = VOICE_PAR[r.dataset.k](v);
+      r.max = parMax(par); r.value = values[par]; r.previousElementSibling.textContent = values[par];
+    }
   });
 }
 const flashT = [];
 function flash(v) {
-  const pad = $('drums').children[v]?.firstChild; if (!pad) return;
+  const pad = $('drums').children[v]?.querySelector('.pad'); if (!pad) return;
   pad.classList.add('hit'); clearTimeout(flashT[v]); flashT[v] = setTimeout(() => pad.classList.remove('hit'), 110);
+}
+
+// ---- kit-wide macros: each moves every unlocked drum from where it was when the drag began, and goes back to
+// the middle when the kit is replaced ----
+const MACROS = {
+  tune: (v, d) => setPar(v, 'pitch', base[v].pitch + d / 50 * 12), // up to an octave either way
+  length: (v, d) => setPar(v, 'decay', base[v].decay * 2 ** (d / 25)), // a quarter to four times as long
+  tone: (v, d) => setPar(v, 'filter', base[v].filter + d),
+  drive: (v, d) => setPar(v, 'drive', base[v].drive + d * 1.2),
+  punch: (v, d) => {
+    // the pitch sweep (the four drums with one) and the transient click
+    if (v < 4) values[PAR['MODAMNT' + n1(v)]] = Math.max(0, Math.min(127, Math.round(base[v].mod + d * 1.2)));
+    values[PAR['TRANS' + n1(v) + '_VOL']] = Math.max(0, Math.min(127, Math.round(base[v].trans + d * 1.2)));
+  },
+};
+let base = null, baseAt = 0;
+function snapshot(at) {
+  baseAt = at;
+  base = DRUMS.map((_, v) => ({ ...Object.fromEntries(Object.keys(VOICE_PAR).map((k) => [k, values[VOICE_PAR[k](v)]])),
+    mod: v < 4 ? values[PAR['MODAMNT' + n1(v)]] : 0, trans: values[PAR['TRANS' + n1(v) + '_VOL']] }));
+}
+function buildMacros() {
+  $('macros').innerHTML = Object.keys(MACROS).map((k) => `<label>${k} <output></output><input type="range" min="-50" max="50" value="0" data-k="${k}" aria-label="kit ${k}"></label>`).join('');
+  for (const r of $('macros').querySelectorAll('input')) {
+    const show = () => { const x = Number(r.value); r.previousElementSibling.textContent = x > 0 ? '+' + x : x; };
+    r.addEventListener('input', () => {
+      if (!gesture) { startGesture(); snapshot(Number(r.dataset.at || 0)); }
+      const d = Number(r.value) - baseAt;
+      for (let v = 0; v < 6; v++) if (!locked[v]) MACROS[r.dataset.k](v, d);
+      sendKit(); drawFaders(); show();
+    });
+    r.addEventListener('change', () => { endGesture(); r.dataset.at = r.value; drawSaved(); });
+    show();
+  }
+}
+function resetMacros() {
+  for (const r of $('macros').querySelectorAll('input')) { r.value = 0; r.dataset.at = 0; r.previousElementSibling.textContent = 0; }
 }
 
 // ---- the pattern: the five Elixir styles, from beat, energy and fills ----
@@ -424,6 +495,6 @@ document.addEventListener('keydown', (e) => {
 // a space must not also press the button that has focus (the one last clicked)
 document.addEventListener('keyup', (e) => { if (e.key === ' ' && !typing(e.target)) e.preventDefault(); });
 
-buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
+buildMacros(); buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
 // start on a fresh kit, so the page always opens on something new
 newKit(); undo = null; $('undo').disabled = true;

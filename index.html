@@ -67,6 +67,14 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 .presets { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; margin-bottom: 6px; }
 .presets button { min-width: 44px; }
 .row.two { grid-template-columns: repeat(2, 1fr); }
+/* per-drum faders and the kit macros: a label and value over each fader */
+.voice { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.voice:last-child { border-bottom: 0; padding-bottom: 0; }
+.faders, .macros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
+.macros { gap: 4px 10px; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+.faders label, .macros label { display: grid; grid-template-columns: 1fr auto; align-items: end; font-size: var(--fs-s); text-transform: uppercase; line-height: 1; }
+.faders label input, .macros label input { grid-column: 1 / -1; }
+.faders output, .macros output { color: var(--dim); }
 /* phone: the two columns are only wrappers; the cards stack as before */
 .col { display: contents; }
 .keys { display: none; }
@@ -82,7 +90,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 
 /* desktop (a laptop's Chrome window): kit on the left, pattern on the right */
 @media (min-width: 1000px) {
-  main { max-width: 1440px; padding: 16px 20px 32px; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 12px 14px; align-items: start; }
+  main { max-width: 1440px; padding: 16px 20px 32px; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 12px 14px; align-items: start; }
   .top, .transport { grid-column: 1 / -1; }
   .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .kitcard { order: -1; }
@@ -92,8 +100,10 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   .drum button:not(.pad) { padding: 4px 12px; }
   .vary input { width: 180px; }
   .foldbody { padding-top: 4px; }
-  .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
-  .ctl label { grid-template-columns: 3.8em minmax(0, 1fr) 5.2em; }
+  .macros { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .drums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+  .voice, .voice:last-child { border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .voice:nth-last-child(-n+2) { border-bottom: 0; padding-bottom: 0; }
 }
 /* the pattern card's head folds it */
 .head.fold { width: 100%; min-height: 40px; padding: 0 0 6px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; text-align: left; background: transparent; color: var(--ink); }
@@ -107,7 +117,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 
 <main>
   <header class="top">
-    <b class="title">elixir kits<small>v5</small></b>
+    <b class="title">elixir kits<small>v6</small></b>
     <span class="kitname" id="kit-name">init</span>
   </header>
 
@@ -139,6 +149,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
     <div class="head"><span>kit</span>
       <label class="vary">vary <input type="range" id="vary" min="0" max="40" value="10"><output id="vary-out">10%</output></label>
     </div>
+    <div class="macros" id="macros"></div>
     <div class="drums" id="drums"></div>
   </section>
 
@@ -4213,7 +4224,7 @@ function newKit() {
   for (let v = 0; v < 6; v++) if (!locked[v]) newVoice(v);
   kitName = alienName(); kitChanged();
 }
-function kitChanged() { sendKit(); drawDrums(); $('kit-name').textContent = kitName; drawSaved(); }
+function kitChanged() { sendKit(); drawDrums(); resetMacros(); $('kit-name').textContent = kitName; drawSaved(); }
 function useKit(kit, name) {
   remember();
   for (let p = 0; p < NPAR; p++) values[p] = kit[p] || 0;
@@ -4234,29 +4245,100 @@ function alienName() {
   return alienWord();
 }
 
-// ---- drum rows: tap the name to hear it; new, alter and lock per voice ----
+// ---- drum rows: tap the name to hear it; new, alter and lock per voice, and pitch, decay and filter faders ----
+// each fader is one LXR-02 parameter, so saves, .snd and exports carry it
+const n1 = (v) => v + 1;
+const VOICE_PAR = {
+  pitch: (v) => PAR['COARSE' + n1(v)],
+  decay: (v) => (v === 5 ? PAR.VELOD6_CLOSED : PAR['VELOD' + n1(v)]),
+  filter: (v) => PAR['FILTER_FREQ_' + n1(v)],
+  drive: (v) => [PAR.DRIVE1, PAR.DRIVE2, PAR.DRIVE3, PAR.SNARE_DISTORTION, PAR.CYMBAL_DISTORTION, PAR.HAT_DISTORTION][v],
+};
+const FADERS = ['pitch', 'decay', 'filter'];
+const trig = (v) => send({ type: 'trig', voice: v, vel: 110 });
+// one undo step per drag, not per movement
+let gesture = false;
+const startGesture = () => { if (!gesture) { gesture = true; remember(); } };
+const endGesture = () => { gesture = false; };
+// a fader's value; the hihat's decay also moves its open decay by the same amount
+function setPar(v, kind, x) {
+  const par = VOICE_PAR[kind](v), old = values[par];
+  values[par] = Math.max(0, Math.min(parMax(par), Math.round(x)));
+  if (kind === 'decay' && v === 5) values[PAR.VELOD6_OPEN] = Math.max(0, Math.min(127, values[PAR.VELOD6_OPEN] + values[par] - old));
+}
 function drawDrums() {
   const box = $('drums');
   if (!box.children.length) DRUMS.forEach((d, v) => {
-    const row = document.createElement('div'); row.className = 'drum';
-    row.innerHTML = `<button class="pad" type="button">${d}<small></small></button><button type="button">new</button><button type="button">alter</button><button class="lock" type="button">lock</button>`;
-    const [pad, nw, alt, lock] = row.children;
+    const voice = document.createElement('div'); voice.className = 'voice';
+    voice.innerHTML = `<div class="drum"><button class="pad" type="button">${d}<small></small></button><button type="button">new</button><button type="button">alter</button><button class="lock" type="button">lock</button></div>`
+      + `<div class="faders">${FADERS.map((k) => `<label>${k} <output></output><input type="range" min="0" max="127" data-k="${k}" aria-label="${d} ${k}"></label>`).join('')}</div>`;
+    const [pad, nw, alt, lock] = voice.firstChild.children;
     pad.dataset.key = v + 1; pad.title = `Play ${d} (${v + 1})`;
-    pad.addEventListener('pointerdown', async () => { await startAudio(); send({ type: 'trig', voice: v, vel: 110 }); flash(v); });
-    nw.addEventListener('click', async () => { await startAudio(); remember(); newVoice(v); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
-    alt.addEventListener('click', async () => { await startAudio(); remember(); varyVoice(v, 0.1); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
+    pad.addEventListener('pointerdown', async () => { await startAudio(); trig(v); flash(v); });
+    nw.addEventListener('click', async () => { await startAudio(); remember(); newVoice(v); kitChanged(); trig(v); });
+    alt.addEventListener('click', async () => { await startAudio(); remember(); varyVoice(v, 0.1); kitChanged(); trig(v); });
     lock.addEventListener('click', () => { locked[v] = !locked[v]; drawDrums(); });
-    box.append(row);
+    for (const r of voice.querySelectorAll('input')) {
+      r.addEventListener('input', () => { startGesture(); setPar(v, r.dataset.k, Number(r.value)); sendKit(); drawFaders(); });
+      r.addEventListener('change', async () => { endGesture(); drawSaved(); await startAudio(); if (!playing) trig(v); });
+    }
+    box.append(voice);
   });
-  [...box.children].forEach((row, v) => {
-    row.querySelector('small').textContent = `from ${from[v]}`;
-    row.querySelector('.lock').classList.toggle('on', locked[v]);
+  [...box.children].forEach((voice, v) => {
+    voice.querySelector('small').textContent = `from ${from[v]}`;
+    voice.querySelector('.lock').classList.toggle('on', locked[v]);
+  });
+  drawFaders();
+}
+function drawFaders() {
+  [...$('drums').children].forEach((voice, v) => {
+    for (const r of voice.querySelectorAll('input')) {
+      const par = VOICE_PAR[r.dataset.k](v);
+      r.max = parMax(par); r.value = values[par]; r.previousElementSibling.textContent = values[par];
+    }
   });
 }
 const flashT = [];
 function flash(v) {
-  const pad = $('drums').children[v]?.firstChild; if (!pad) return;
+  const pad = $('drums').children[v]?.querySelector('.pad'); if (!pad) return;
   pad.classList.add('hit'); clearTimeout(flashT[v]); flashT[v] = setTimeout(() => pad.classList.remove('hit'), 110);
+}
+
+// ---- kit-wide macros: each moves every unlocked drum from where it was when the drag began, and goes back to
+// the middle when the kit is replaced ----
+const MACROS = {
+  tune: (v, d) => setPar(v, 'pitch', base[v].pitch + d / 50 * 12), // up to an octave either way
+  length: (v, d) => setPar(v, 'decay', base[v].decay * 2 ** (d / 25)), // a quarter to four times as long
+  tone: (v, d) => setPar(v, 'filter', base[v].filter + d),
+  drive: (v, d) => setPar(v, 'drive', base[v].drive + d * 1.2),
+  punch: (v, d) => {
+    // the pitch sweep (the four drums with one) and the transient click
+    if (v < 4) values[PAR['MODAMNT' + n1(v)]] = Math.max(0, Math.min(127, Math.round(base[v].mod + d * 1.2)));
+    values[PAR['TRANS' + n1(v) + '_VOL']] = Math.max(0, Math.min(127, Math.round(base[v].trans + d * 1.2)));
+  },
+};
+let base = null, baseAt = 0;
+function snapshot(at) {
+  baseAt = at;
+  base = DRUMS.map((_, v) => ({ ...Object.fromEntries(Object.keys(VOICE_PAR).map((k) => [k, values[VOICE_PAR[k](v)]])),
+    mod: v < 4 ? values[PAR['MODAMNT' + n1(v)]] : 0, trans: values[PAR['TRANS' + n1(v) + '_VOL']] }));
+}
+function buildMacros() {
+  $('macros').innerHTML = Object.keys(MACROS).map((k) => `<label>${k} <output></output><input type="range" min="-50" max="50" value="0" data-k="${k}" aria-label="kit ${k}"></label>`).join('');
+  for (const r of $('macros').querySelectorAll('input')) {
+    const show = () => { const x = Number(r.value); r.previousElementSibling.textContent = x > 0 ? '+' + x : x; };
+    r.addEventListener('input', () => {
+      if (!gesture) { startGesture(); snapshot(Number(r.dataset.at || 0)); }
+      const d = Number(r.value) - baseAt;
+      for (let v = 0; v < 6; v++) if (!locked[v]) MACROS[r.dataset.k](v, d);
+      sendKit(); drawFaders(); show();
+    });
+    r.addEventListener('change', () => { endGesture(); r.dataset.at = r.value; drawSaved(); });
+    show();
+  }
+}
+function resetMacros() {
+  for (const r of $('macros').querySelectorAll('input')) { r.value = 0; r.dataset.at = 0; r.previousElementSibling.textContent = 0; }
 }
 
 // ---- the pattern: the five Elixir styles, from beat, energy and fills ----
@@ -4507,7 +4589,7 @@ document.addEventListener('keydown', (e) => {
 // a space must not also press the button that has focus (the one last clicked)
 document.addEventListener('keyup', (e) => { if (e.key === ' ' && !typing(e.target)) e.preventDefault(); });
 
-buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
+buildMacros(); buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
 // start on a fresh kit, so the page always opens on something new
 newKit(); undo = null; $('undo').disabled = true;
 </script>
