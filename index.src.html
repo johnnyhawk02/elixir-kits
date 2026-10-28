@@ -50,8 +50,9 @@
   </div>
 
   <div class="col patcol">
-  <section class="card">
-    <div class="head"><span>pattern</span><span class="dim" id="pat-name"></span></div>
+  <section class="card patcard">
+    <button class="head fold" id="pat-fold" type="button" aria-expanded="true" title="Fold the pattern"><span>pattern</span><span class="dim" id="pat-name"></span></button>
+    <div class="foldbody">
     <div class="grid" id="grid"></div>
     <div class="ctl">
       <label>style <select id="style"></select></label>
@@ -61,6 +62,7 @@
       <label>tempo <input type="range" id="tempo" min="60" max="200" value="124"><output id="tempo-out"></output></label>
       <label>groove <select id="groove"></select></label>
       <label>depth <input type="range" id="depth" min="0" max="100" value="60"><output id="depth-out"></output></label>
+    </div>
     </div>
   </section>
 

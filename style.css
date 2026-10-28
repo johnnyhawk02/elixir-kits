@@ -71,7 +71,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 
 /* mouse: a hover shade, and the keyboard hints */
 @media (hover: hover) and (pointer: fine) {
-  button:not(:disabled):not(.on):not(.acc):hover { background: rgba(29, 35, 27, .14); }
+  button:not(:disabled):not(.on):not(.acc):not(.fold):hover { background: rgba(29, 35, 27, .14); }
   .cell.on:hover { background: rgba(29, 35, 27, .62); }
   .big[data-key]::after { content: attr(data-key); display: block; font-size: var(--fs-s); opacity: .55; text-transform: lowercase; margin-top: 2px; }
   .pad { position: relative; }
@@ -96,3 +96,11 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
   .ctl label { grid-template-columns: 3.8em minmax(0, 1fr) 5.2em; }
 }
+/* the pattern card's head folds it */
+.head.fold { width: 100%; min-height: 40px; padding: 0 0 6px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; text-align: left; background: transparent; color: var(--ink); }
+.head.fold span:first-child::before { content: '▾ '; }
+.folded .head.fold span:first-child::before { content: '▸ '; }
+.folded .head.fold { border-bottom: 0; padding-bottom: 0; margin-bottom: 0; }
+.folded .foldbody { display: none; }
+.head.fold:active { background: transparent; color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .head.fold:hover { background: transparent; } .head.fold:hover span:first-child { text-decoration: underline; } }

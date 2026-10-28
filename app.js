@@ -435,6 +435,17 @@ $('undo').addEventListener('click', () => {
 });
 $('vary').addEventListener('input', () => { $('vary-out').textContent = $('vary').value + '%'; });
 
+// ---- the pattern card folds away (remembered in this browser) ----
+const FOLD_KEY = 'elixir-kits-pattern-folded';
+function setFold(f) {
+  $('pat-fold').closest('.card').classList.toggle('folded', f);
+  $('pat-fold').setAttribute('aria-expanded', String(!f));
+  $('pat-fold').title = f ? 'Show the pattern' : 'Fold the pattern';
+  try { localStorage.setItem(FOLD_KEY, f ? '1' : ''); } catch (e) {}
+}
+$('pat-fold').addEventListener('click', () => setFold(!$('pat-fold').closest('.card').classList.contains('folded')));
+try { setFold(localStorage.getItem(FOLD_KEY) === '1'); } catch (e) {}
+
 // ---- keyboard (desktop): space play/stop, k new kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
 const KEYS = { ' ': 'play', k: 'new-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
 const typing = (el) => el && (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'range'));

@@ -81,7 +81,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 
 /* mouse: a hover shade, and the keyboard hints */
 @media (hover: hover) and (pointer: fine) {
-  button:not(:disabled):not(.on):not(.acc):hover { background: rgba(29, 35, 27, .14); }
+  button:not(:disabled):not(.on):not(.acc):not(.fold):hover { background: rgba(29, 35, 27, .14); }
   .cell.on:hover { background: rgba(29, 35, 27, .62); }
   .big[data-key]::after { content: attr(data-key); display: block; font-size: var(--fs-s); opacity: .55; text-transform: lowercase; margin-top: 2px; }
   .pad { position: relative; }
@@ -106,11 +106,19 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
   .ctl label { grid-template-columns: 3.8em minmax(0, 1fr) 5.2em; }
 }
+/* the pattern card's head folds it */
+.head.fold { width: 100%; min-height: 40px; padding: 0 0 6px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; text-align: left; background: transparent; color: var(--ink); }
+.head.fold span:first-child::before { content: '▾ '; }
+.folded .head.fold span:first-child::before { content: '▸ '; }
+.folded .head.fold { border-bottom: 0; padding-bottom: 0; margin-bottom: 0; }
+.folded .foldbody { display: none; }
+.head.fold:active { background: transparent; color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .head.fold:hover { background: transparent; } .head.fold:hover span:first-child { text-decoration: underline; } }
 </style>
 
 <main>
   <header class="top">
-    <b class="title">elixir kits<small>v2</small></b>
+    <b class="title">elixir kits<small>v3</small></b>
     <span class="kitname" id="kit-name">init</span>
   </header>
 
@@ -147,8 +155,9 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   </div>
 
   <div class="col patcol">
-  <section class="card">
-    <div class="head"><span>pattern</span><span class="dim" id="pat-name"></span></div>
+  <section class="card patcard">
+    <button class="head fold" id="pat-fold" type="button" aria-expanded="true" title="Fold the pattern"><span>pattern</span><span class="dim" id="pat-name"></span></button>
+    <div class="foldbody">
     <div class="grid" id="grid"></div>
     <div class="ctl">
       <label>style <select id="style"></select></label>
@@ -158,6 +167,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
       <label>tempo <input type="range" id="tempo" min="60" max="200" value="124"><output id="tempo-out"></output></label>
       <label>groove <select id="groove"></select></label>
       <label>depth <input type="range" id="depth" min="0" max="100" value="60"><output id="depth-out"></output></label>
+    </div>
     </div>
   </section>
 
@@ -4518,6 +4528,17 @@ $('undo').addEventListener('click', () => {
   undo = null; $('undo').disabled = true; kitChanged();
 });
 $('vary').addEventListener('input', () => { $('vary-out').textContent = $('vary').value + '%'; });
+
+// ---- the pattern card folds away (remembered in this browser) ----
+const FOLD_KEY = 'elixir-kits-pattern-folded';
+function setFold(f) {
+  $('pat-fold').closest('.card').classList.toggle('folded', f);
+  $('pat-fold').setAttribute('aria-expanded', String(!f));
+  $('pat-fold').title = f ? 'Show the pattern' : 'Fold the pattern';
+  try { localStorage.setItem(FOLD_KEY, f ? '1' : ''); } catch (e) {}
+}
+$('pat-fold').addEventListener('click', () => setFold(!$('pat-fold').closest('.card').classList.contains('folded')));
+try { setFold(localStorage.getItem(FOLD_KEY) === '1'); } catch (e) {}
 
 // ---- keyboard (desktop): space play/stop, k new kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
 const KEYS = { ' ': 'play', k: 'new-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
