@@ -17,7 +17,7 @@ button { font: inherit; color: var(--ink); background: transparent; border: 2px 
   cursor: pointer; text-transform: uppercase; touch-action: manipulation; transition: background .22s, color .22s; }
 button:active, button.on { background: var(--ink); color: var(--glass); transition-duration: .06s; }
 button:disabled { opacity: .35; }
-.transport { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.transport { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .big { min-height: 54px; padding: 4px; line-height: 1; }
 .drums { display: flex; flex-direction: column; gap: 6px; }
 .drum { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; align-items: stretch; }

@@ -391,6 +391,7 @@ $('import-file').addEventListener('change', async () => {
   if (added) { store(); presetId = 's0'; drawSaved(); loadPreset('s0'); }
   $('import-msg').textContent = `${added ? `imported ${added} kit${added > 1 ? 's' : ''}` : 'nothing imported'}${bad.length ? ` · couldn't read ${bad.join(', ')}` : ''}`;
 });
+$('save-top').addEventListener('click', () => $('save').click());
 $('save').addEventListener('click', () => {
   if (kitName === 'init' || saved.some((k) => k.name === kitName)) kitName = alienName();
   saved.unshift({ name: kitName, kit: Array.from(values), from: from.slice() }); store();

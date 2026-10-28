@@ -27,7 +27,7 @@ button { font: inherit; color: var(--ink); background: transparent; border: 2px 
   cursor: pointer; text-transform: uppercase; touch-action: manipulation; transition: background .22s, color .22s; }
 button:active, button.on { background: var(--ink); color: var(--glass); transition-duration: .06s; }
 button:disabled { opacity: .35; }
-.transport { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.transport { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .big { min-height: 54px; padding: 4px; line-height: 1; }
 .drums { display: flex; flex-direction: column; gap: 6px; }
 .drum { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; align-items: stretch; }
@@ -118,7 +118,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 
 <main>
   <header class="top">
-    <b class="title">elixir kits<small>v3</small></b>
+    <b class="title">elixir kits<small>v4</small></b>
     <span class="kitname" id="kit-name">init</span>
   </header>
 
@@ -127,6 +127,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
     <button class="big" id="new-kit" type="button" data-key="k" title="New kit (k)">new kit</button>
     <button class="big" id="new-pat" type="button" data-key="p" title="New pattern (p)">new pattern</button>
     <button class="big" id="undo" type="button" data-key="u" title="Undo (u)" disabled>undo</button>
+    <button class="big" id="save-top" type="button" data-key="s" title="Save drum kit (s)">save kit</button>
   </section>
 
   <div class="col kitcol">
@@ -4485,6 +4486,7 @@ $('import-file').addEventListener('change', async () => {
   if (added) { store(); presetId = 's0'; drawSaved(); loadPreset('s0'); }
   $('import-msg').textContent = `${added ? `imported ${added} kit${added > 1 ? 's' : ''}` : 'nothing imported'}${bad.length ? ` · couldn't read ${bad.join(', ')}` : ''}`;
 });
+$('save-top').addEventListener('click', () => $('save').click());
 $('save').addEventListener('click', () => {
   if (kitName === 'init' || saved.some((k) => k.name === kitName)) kitName = alienName();
   saved.unshift({ name: kitName, kit: Array.from(values), from: from.slice() }); store();
