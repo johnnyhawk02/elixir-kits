@@ -54,7 +54,6 @@
   <section class="card patcard">
     <button class="head fold" id="pat-fold" type="button" aria-expanded="true" title="Fold the pattern"><span>pattern</span><span class="dim" id="pat-name"></span></button>
     <div class="foldbody">
-    <div class="grid" id="grid"></div>
     <div class="ctl">
       <label>style <select id="style"></select></label>
       <label>beat <span class="stepper"><button type="button" id="beat-prev" aria-label="Previous beat">‹</button><output id="beat-out"></output><button type="button" id="beat-next" aria-label="Next beat">›</button></span></label>
@@ -78,7 +77,7 @@
     <p class="note">Export saves every kit here as <b>elixir-kits.json</b>. On Elixir Mobile, open PRST and press IMPORT to add them as presets (sound only: the phone keeps its own pattern). A .snd file is one kit in the LXR-02's own format.</p>
   </section>
   </div>
-  <p class="keys">keys: space play/stop · k new kit · p new pattern · u undo · s save · 1-6 play a drum · ← → preset · r random preset. drag across the grid to paint steps.</p>
+  <p class="keys">keys: space play/stop · k new kit · p new pattern · u undo · s save · 1-6 play a drum · ← → preset · r random preset.</p>
 </main>
 
 <script id="engine">

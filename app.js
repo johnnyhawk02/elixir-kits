@@ -178,11 +178,10 @@ function flash(v) {
 
 // ---- the pattern: the five Elixir styles, from beat, energy and fills ----
 const ROW = ['k', 'lo', 'hi', 's', 'cy', 'ch', 'oh'];
-const TRACKS = ['dr1', 'dr2', 'dr3', 'snr', 'cym', 'chh', 'ohh'];
 const perf = { style: 0, beat: 0, energy: 60, fills: 40, tempo: 124 };
 const groove = { type: 'straight', depth: 60 };
 const blankPage = () => ({ on: blankFill(), acc: blankFill(), bar: blankFill() });
-let pattern = blankPage(), playing = false, edited = false;
+let pattern = blankPage(), playing = false;
 function fillShape(fills) {
   if (!fills) return null;
   return { every: fills < 34 ? 8 : fills < 67 ? 4 : 2, len: 2 * Math.round(1 + fills / 100 * 3), busy: fills >= 50 };
@@ -209,7 +208,7 @@ function generate() {
       P.acc[t][s] = on && ((c === '1' && energy >= 55) || (t === 6 && energy >= 85) || (fil && cond > 0 && (s % 4 === 0 || s === 15))) ? 1 : 0;
     }
   }
-  pattern = P; edited = false;
+  pattern = P;
   drawPattern(); sendSeq();
 }
 const grooveMsg = () => {
@@ -226,55 +225,14 @@ function newPattern() {
   drawCtl(); generate();
 }
 
-// the grid: tap a step to cycle off, on, accented. With a mouse, dragging across steps gives them the first one's new state.
-const cells = [];
-const cellState = (t, s) => (!pattern.on[t][s] ? 0 : pattern.acc[t][s] ? 2 : 1);
-function setCell(t, s, st) {
-  const P = pattern;
-  if (cellState(t, s) === st && !P.bar[t][s]) return;
-  P.on[t][s] = st ? 1 : 0; P.acc[t][s] = st === 2 ? 1 : 0; P.bar[t][s] = 0;
-  edited = true; drawPattern(); sendSeq();
-}
-let paint = -1;
-window.addEventListener('pointerup', () => { paint = -1; });
-function buildGrid() {
-  const grid = $('grid');
-  for (let t = 0; t < 7; t++) {
-    const l = document.createElement('span'); l.className = 'lbl'; l.textContent = TRACKS[t]; grid.append(l);
-    cells[t] = [];
-    for (let s = 0; s < 16; s++) {
-      const c = document.createElement('button'); c.type = 'button'; c.className = 'cell' + (s && s % 4 === 0 ? ' q' : '');
-      c.setAttribute('aria-label', `${TRACKS[t]} step ${s + 1}`);
-      c.addEventListener('pointerdown', (e) => {
-        if (e.pointerType !== 'mouse' || e.button) return;
-        paint = (cellState(t, s) + 1) % 3; setCell(t, s, paint);
-      });
-      c.addEventListener('pointerenter', (e) => { if (paint >= 0 && e.buttons & 1) setCell(t, s, paint); });
-      c.addEventListener('click', (e) => {
-        if (e.pointerType === 'mouse') return; // a mouse press is handled on pointerdown
-        setCell(t, s, (cellState(t, s) + 1) % 3);
-      });
-      grid.append(c); cells[t][s] = c;
-    }
-  }
-}
+// the pattern is only heard, not shown: its name, and the drum pads flash as it plays
 function drawPattern() {
-  for (let t = 0; t < 7; t++) for (let s = 0; s < 16; s++) {
-    const c = cells[t][s], on = pattern.on[t][s];
-    c.className = 'cell' + (s && s % 4 === 0 ? ' q' : '') + (on ? (pattern.acc[t][s] ? ' acc' : pattern.bar[t][s] ? ' cond' : ' on') : '');
-  }
   const st = STYLES[perf.style];
-  $('pat-name').textContent = edited ? 'edited' : `${st.name} · ${st.grooves[perf.beat].name.toLowerCase()}`;
+  $('pat-name').textContent = `${st.name} · ${st.grooves[perf.beat].name.toLowerCase()}`;
 }
-let nowStep = -1;
 function onEvent(ev) {
-  if (ev.type !== 'step') return;
-  if (nowStep >= 0) for (let t = 0; t < 7; t++) cells[t][nowStep].classList.remove('now');
-  nowStep = ev.step;
-  for (let t = 0; t < 7; t++) cells[t][nowStep].classList.add('now');
-  for (const t of ev.hits) flash(Math.min(t, 5));
+  if (ev.type === 'step') for (const t of ev.hits) flash(Math.min(t, 5));
 }
-function clearNow() { if (nowStep >= 0) for (let t = 0; t < 7; t++) cells[t][nowStep].classList.remove('now'); nowStep = -1; }
 
 // ---- pattern controls ----
 const ENERGY_NAMES = [[1, 'empty'], [15, 'minimal'], [35, 'low'], [60, 'groove'], [85, 'driving'], [101, 'peak']];
@@ -424,7 +382,6 @@ $('export').addEventListener('click', () => {
 $('play').addEventListener('click', async () => {
   await startAudio();
   playing = !playing; $('play').classList.toggle('on', playing); $('play').textContent = playing ? 'stop' : 'play';
-  if (!playing) clearNow();
   sendSeq();
 });
 $('new-kit').addEventListener('click', async () => { await startAudio(); newKit(); });
@@ -467,6 +424,6 @@ document.addEventListener('keydown', (e) => {
 // a space must not also press the button that has focus (the one last clicked)
 document.addEventListener('keyup', (e) => { if (e.key === ' ' && !typing(e.target)) e.preventDefault(); });
 
-buildGrid(); buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
+buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
 // start on a fresh kit, so the page always opens on something new
 newKit(); undo = null; $('undo').disabled = true;

@@ -27,14 +27,6 @@ button:disabled { opacity: .35; }
 .pad.hit { background: var(--ink); color: var(--glass); }
 .drum button:not(.pad) { padding: 4px 7px; }
 .lock.on::before { content: '■ '; }
-.grid { display: grid; grid-template-columns: 3.4em repeat(16, 1fr); gap: 2px; margin-bottom: 10px; }
-.grid .lbl { font-size: var(--fs-s); text-transform: uppercase; align-self: center; white-space: nowrap; }
-.cell { min-height: 24px; padding: 0; border-width: 1px; border-radius: 2px; }
-.cell.q { margin-left: 3px; }
-.cell.on { background: rgba(29, 35, 27, .5); }
-.cell.acc { background: var(--ink); }
-.cell.cond { background: repeating-linear-gradient(135deg, var(--ink) 0 3px, transparent 3px 6px); }
-.cell.now { outline: 2px solid var(--ink); outline-offset: 1px; }
 .ctl { display: flex; flex-direction: column; gap: 6px; }
 .ctl label { display: grid; grid-template-columns: 4.2em minmax(0, 1fr) 6.5em; align-items: center; gap: 8px; text-transform: uppercase; }
 .ctl label > select, .ctl label > .stepper { grid-column: 2 / 4; }
@@ -72,7 +64,6 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 /* mouse: a hover shade, and the keyboard hints */
 @media (hover: hover) and (pointer: fine) {
   button:not(:disabled):not(.on):not(.acc):not(.fold):hover { background: rgba(29, 35, 27, .14); }
-  .cell.on:hover { background: rgba(29, 35, 27, .62); }
   .big[data-key]::after { content: attr(data-key); display: block; font-size: var(--fs-s); opacity: .55; text-transform: lowercase; margin-top: 2px; }
   .pad { position: relative; }
   .pad::after { content: attr(data-key); position: absolute; top: 4px; right: 8px; font-size: var(--fs-s); opacity: .45; }
@@ -90,9 +81,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   .drum button { min-height: 48px; }
   .drum button:not(.pad) { padding: 4px 12px; }
   .vary input { width: 180px; }
-  .grid { gap: 3px; }
-  .cell { min-height: 34px; }
-  .cell.q { margin-left: 6px; }
+  .foldbody { padding-top: 4px; }
   .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
   .ctl label { grid-template-columns: 3.8em minmax(0, 1fr) 5.2em; }
 }

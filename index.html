@@ -37,14 +37,6 @@ button:disabled { opacity: .35; }
 .pad.hit { background: var(--ink); color: var(--glass); }
 .drum button:not(.pad) { padding: 4px 7px; }
 .lock.on::before { content: '■ '; }
-.grid { display: grid; grid-template-columns: 3.4em repeat(16, 1fr); gap: 2px; margin-bottom: 10px; }
-.grid .lbl { font-size: var(--fs-s); text-transform: uppercase; align-self: center; white-space: nowrap; }
-.cell { min-height: 24px; padding: 0; border-width: 1px; border-radius: 2px; }
-.cell.q { margin-left: 3px; }
-.cell.on { background: rgba(29, 35, 27, .5); }
-.cell.acc { background: var(--ink); }
-.cell.cond { background: repeating-linear-gradient(135deg, var(--ink) 0 3px, transparent 3px 6px); }
-.cell.now { outline: 2px solid var(--ink); outline-offset: 1px; }
 .ctl { display: flex; flex-direction: column; gap: 6px; }
 .ctl label { display: grid; grid-template-columns: 4.2em minmax(0, 1fr) 6.5em; align-items: center; gap: 8px; text-transform: uppercase; }
 .ctl label > select, .ctl label > .stepper { grid-column: 2 / 4; }
@@ -82,7 +74,6 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 /* mouse: a hover shade, and the keyboard hints */
 @media (hover: hover) and (pointer: fine) {
   button:not(:disabled):not(.on):not(.acc):not(.fold):hover { background: rgba(29, 35, 27, .14); }
-  .cell.on:hover { background: rgba(29, 35, 27, .62); }
   .big[data-key]::after { content: attr(data-key); display: block; font-size: var(--fs-s); opacity: .55; text-transform: lowercase; margin-top: 2px; }
   .pad { position: relative; }
   .pad::after { content: attr(data-key); position: absolute; top: 4px; right: 8px; font-size: var(--fs-s); opacity: .45; }
@@ -100,9 +91,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   .drum button { min-height: 48px; }
   .drum button:not(.pad) { padding: 4px 12px; }
   .vary input { width: 180px; }
-  .grid { gap: 3px; }
-  .cell { min-height: 34px; }
-  .cell.q { margin-left: 6px; }
+  .foldbody { padding-top: 4px; }
   .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
   .ctl label { grid-template-columns: 3.8em minmax(0, 1fr) 5.2em; }
 }
@@ -118,7 +107,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 
 <main>
   <header class="top">
-    <b class="title">elixir kits<small>v4</small></b>
+    <b class="title">elixir kits<small>v5</small></b>
     <span class="kitname" id="kit-name">init</span>
   </header>
 
@@ -159,7 +148,6 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   <section class="card patcard">
     <button class="head fold" id="pat-fold" type="button" aria-expanded="true" title="Fold the pattern"><span>pattern</span><span class="dim" id="pat-name"></span></button>
     <div class="foldbody">
-    <div class="grid" id="grid"></div>
     <div class="ctl">
       <label>style <select id="style"></select></label>
       <label>beat <span class="stepper"><button type="button" id="beat-prev" aria-label="Previous beat">‹</button><output id="beat-out"></output><button type="button" id="beat-next" aria-label="Next beat">›</button></span></label>
@@ -183,7 +171,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
     <p class="note">Export saves every kit here as <b>elixir-kits.json</b>. On Elixir Mobile, open PRST and press IMPORT to add them as presets (sound only: the phone keeps its own pattern). A .snd file is one kit in the LXR-02's own format.</p>
   </section>
   </div>
-  <p class="keys">keys: space play/stop · k new kit · p new pattern · u undo · s save · 1-6 play a drum · ← → preset · r random preset. drag across the grid to paint steps.</p>
+  <p class="keys">keys: space play/stop · k new kit · p new pattern · u undo · s save · 1-6 play a drum · ← → preset · r random preset.</p>
 </main>
 
 <script id="engine">
@@ -4273,11 +4261,10 @@ function flash(v) {
 
 // ---- the pattern: the five Elixir styles, from beat, energy and fills ----
 const ROW = ['k', 'lo', 'hi', 's', 'cy', 'ch', 'oh'];
-const TRACKS = ['dr1', 'dr2', 'dr3', 'snr', 'cym', 'chh', 'ohh'];
 const perf = { style: 0, beat: 0, energy: 60, fills: 40, tempo: 124 };
 const groove = { type: 'straight', depth: 60 };
 const blankPage = () => ({ on: blankFill(), acc: blankFill(), bar: blankFill() });
-let pattern = blankPage(), playing = false, edited = false;
+let pattern = blankPage(), playing = false;
 function fillShape(fills) {
   if (!fills) return null;
   return { every: fills < 34 ? 8 : fills < 67 ? 4 : 2, len: 2 * Math.round(1 + fills / 100 * 3), busy: fills >= 50 };
@@ -4304,7 +4291,7 @@ function generate() {
       P.acc[t][s] = on && ((c === '1' && energy >= 55) || (t === 6 && energy >= 85) || (fil && cond > 0 && (s % 4 === 0 || s === 15))) ? 1 : 0;
     }
   }
-  pattern = P; edited = false;
+  pattern = P;
   drawPattern(); sendSeq();
 }
 const grooveMsg = () => {
@@ -4321,55 +4308,14 @@ function newPattern() {
   drawCtl(); generate();
 }
 
-// the grid: tap a step to cycle off, on, accented. With a mouse, dragging across steps gives them the first one's new state.
-const cells = [];
-const cellState = (t, s) => (!pattern.on[t][s] ? 0 : pattern.acc[t][s] ? 2 : 1);
-function setCell(t, s, st) {
-  const P = pattern;
-  if (cellState(t, s) === st && !P.bar[t][s]) return;
-  P.on[t][s] = st ? 1 : 0; P.acc[t][s] = st === 2 ? 1 : 0; P.bar[t][s] = 0;
-  edited = true; drawPattern(); sendSeq();
-}
-let paint = -1;
-window.addEventListener('pointerup', () => { paint = -1; });
-function buildGrid() {
-  const grid = $('grid');
-  for (let t = 0; t < 7; t++) {
-    const l = document.createElement('span'); l.className = 'lbl'; l.textContent = TRACKS[t]; grid.append(l);
-    cells[t] = [];
-    for (let s = 0; s < 16; s++) {
-      const c = document.createElement('button'); c.type = 'button'; c.className = 'cell' + (s && s % 4 === 0 ? ' q' : '');
-      c.setAttribute('aria-label', `${TRACKS[t]} step ${s + 1}`);
-      c.addEventListener('pointerdown', (e) => {
-        if (e.pointerType !== 'mouse' || e.button) return;
-        paint = (cellState(t, s) + 1) % 3; setCell(t, s, paint);
-      });
-      c.addEventListener('pointerenter', (e) => { if (paint >= 0 && e.buttons & 1) setCell(t, s, paint); });
-      c.addEventListener('click', (e) => {
-        if (e.pointerType === 'mouse') return; // a mouse press is handled on pointerdown
-        setCell(t, s, (cellState(t, s) + 1) % 3);
-      });
-      grid.append(c); cells[t][s] = c;
-    }
-  }
-}
+// the pattern is only heard, not shown: its name, and the drum pads flash as it plays
 function drawPattern() {
-  for (let t = 0; t < 7; t++) for (let s = 0; s < 16; s++) {
-    const c = cells[t][s], on = pattern.on[t][s];
-    c.className = 'cell' + (s && s % 4 === 0 ? ' q' : '') + (on ? (pattern.acc[t][s] ? ' acc' : pattern.bar[t][s] ? ' cond' : ' on') : '');
-  }
   const st = STYLES[perf.style];
-  $('pat-name').textContent = edited ? 'edited' : `${st.name} · ${st.grooves[perf.beat].name.toLowerCase()}`;
+  $('pat-name').textContent = `${st.name} · ${st.grooves[perf.beat].name.toLowerCase()}`;
 }
-let nowStep = -1;
 function onEvent(ev) {
-  if (ev.type !== 'step') return;
-  if (nowStep >= 0) for (let t = 0; t < 7; t++) cells[t][nowStep].classList.remove('now');
-  nowStep = ev.step;
-  for (let t = 0; t < 7; t++) cells[t][nowStep].classList.add('now');
-  for (const t of ev.hits) flash(Math.min(t, 5));
+  if (ev.type === 'step') for (const t of ev.hits) flash(Math.min(t, 5));
 }
-function clearNow() { if (nowStep >= 0) for (let t = 0; t < 7; t++) cells[t][nowStep].classList.remove('now'); nowStep = -1; }
 
 // ---- pattern controls ----
 const ENERGY_NAMES = [[1, 'empty'], [15, 'minimal'], [35, 'low'], [60, 'groove'], [85, 'driving'], [101, 'peak']];
@@ -4519,7 +4465,6 @@ $('export').addEventListener('click', () => {
 $('play').addEventListener('click', async () => {
   await startAudio();
   playing = !playing; $('play').classList.toggle('on', playing); $('play').textContent = playing ? 'stop' : 'play';
-  if (!playing) clearNow();
   sendSeq();
 });
 $('new-kit').addEventListener('click', async () => { await startAudio(); newKit(); });
@@ -4562,7 +4507,7 @@ document.addEventListener('keydown', (e) => {
 // a space must not also press the button that has focus (the one last clicked)
 document.addEventListener('keyup', (e) => { if (e.key === ' ' && !typing(e.target)) e.preventDefault(); });
 
-buildGrid(); buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
+buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
 // start on a fresh kit, so the page always opens on something new
 newKit(); undo = null; $('undo').disabled = true;
 </script>

@@ -7,7 +7,7 @@ engine used by Elixir Mobile), heard dry: no FX, crossfeed, compressor or rush.
 
 - **New kit** takes each voice from a random LXR-02 kit and varies it (the *vary* fader, drum-safe ranges). Each
   drum has its own *new*, *alter* and *lock*.
-- **New pattern** rolls a style, beat, energy, fills and groove from Elixir's pattern styles; the grid can be edited.
+- **New pattern** rolls a style, beat, energy, fills and groove from Elixir's pattern styles (heard, not shown or edited).
 - **Presets**: Elixir Mobile's built-in presets (their kits), the bundled LXR-02 kits, and the kits saved here.
   *Import kits* reads LXR-02 `.snd` files and Elixir presets files (`.json`).
 - **Save kit** keeps it in this browser; **export for Elixir Mobile** writes `elixir-kits.json` (Elixir Mobile's
