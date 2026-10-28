@@ -456,6 +456,11 @@ $('play').addEventListener('click', async () => {
   sendSeq();
 });
 $('new-kit').addEventListener('click', async () => { await startAudio(); newKit(); });
+$('alter-kit').addEventListener('click', async () => {
+  await startAudio(); remember();
+  for (let v = 0; v < 6; v++) if (!locked[v]) varyVoice(v, vary());
+  kitChanged();
+});
 $('new-pat').addEventListener('click', async () => { await startAudio(); newPattern(); });
 $('undo').addEventListener('click', () => {
   if (!undo) return;
@@ -475,8 +480,8 @@ function setFold(f) {
 $('pat-fold').addEventListener('click', () => setFold(!$('pat-fold').closest('.card').classList.contains('folded')));
 try { setFold(localStorage.getItem(FOLD_KEY) === '1'); } catch (e) {}
 
-// ---- keyboard (desktop): space play/stop, k new kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
-const KEYS = { ' ': 'play', k: 'new-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
+// ---- keyboard (desktop): space play/stop, k new kit, a alter kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
+const KEYS = { ' ': 'play', k: 'new-kit', a: 'alter-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
 const typing = (el) => el && (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'range'));
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;

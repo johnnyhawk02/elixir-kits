@@ -27,7 +27,7 @@ button { font: inherit; color: var(--ink); background: transparent; border: 2px 
   cursor: pointer; text-transform: uppercase; touch-action: manipulation; transition: background .22s, color .22s; }
 button:active, button.on { background: var(--ink); color: var(--glass); transition-duration: .06s; }
 button:disabled { opacity: .35; }
-.transport { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.transport { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .big { min-height: 54px; padding: 4px; line-height: 1; }
 .drums { display: flex; flex-direction: column; gap: 6px; }
 .drum { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; align-items: stretch; }
@@ -94,7 +94,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   .top, .transport { grid-column: 1 / -1; }
   .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .kitcard { order: -1; }
-  .transport { gap: 10px; }
+  .transport { gap: 10px; grid-template-columns: repeat(6, 1fr); }
   .big { min-height: 60px; }
   .drum button { min-height: 48px; }
   .drum button:not(.pad) { padding: 4px 12px; }
@@ -117,13 +117,14 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 
 <main>
   <header class="top">
-    <b class="title">elixir kits<small>v6</small></b>
+    <b class="title">elixir kits<small>v7</small></b>
     <span class="kitname" id="kit-name">init</span>
   </header>
 
   <section class="card transport">
     <button class="big" id="play" type="button" data-key="space" title="Play / stop (space)">play</button>
     <button class="big" id="new-kit" type="button" data-key="k" title="New kit (k)">new kit</button>
+    <button class="big" id="alter-kit" type="button" data-key="a" title="Alter kit: vary every unlocked drum by the vary amount (a)">alter kit</button>
     <button class="big" id="new-pat" type="button" data-key="p" title="New pattern (p)">new pattern</button>
     <button class="big" id="undo" type="button" data-key="u" title="Undo (u)" disabled>undo</button>
     <button class="big" id="save-top" type="button" data-key="s" title="Save drum kit (s)">save kit</button>
@@ -182,7 +183,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
     <p class="note">Export saves every kit here as <b>elixir-kits.json</b>. On Elixir Mobile, open PRST and press IMPORT to add them as presets (sound only: the phone keeps its own pattern). A .snd file is one kit in the LXR-02's own format.</p>
   </section>
   </div>
-  <p class="keys">keys: space play/stop · k new kit · p new pattern · u undo · s save · 1-6 play a drum · ← → preset · r random preset.</p>
+  <p class="keys">keys: space play/stop · k new kit · a alter kit · p new pattern · u undo · s save · 1-6 play a drum · ← → preset · r random preset.</p>
 </main>
 
 <script id="engine">
@@ -4550,6 +4551,11 @@ $('play').addEventListener('click', async () => {
   sendSeq();
 });
 $('new-kit').addEventListener('click', async () => { await startAudio(); newKit(); });
+$('alter-kit').addEventListener('click', async () => {
+  await startAudio(); remember();
+  for (let v = 0; v < 6; v++) if (!locked[v]) varyVoice(v, vary());
+  kitChanged();
+});
 $('new-pat').addEventListener('click', async () => { await startAudio(); newPattern(); });
 $('undo').addEventListener('click', () => {
   if (!undo) return;
@@ -4569,8 +4575,8 @@ function setFold(f) {
 $('pat-fold').addEventListener('click', () => setFold(!$('pat-fold').closest('.card').classList.contains('folded')));
 try { setFold(localStorage.getItem(FOLD_KEY) === '1'); } catch (e) {}
 
-// ---- keyboard (desktop): space play/stop, k new kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
-const KEYS = { ' ': 'play', k: 'new-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
+// ---- keyboard (desktop): space play/stop, k new kit, a alter kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
+const KEYS = { ' ': 'play', k: 'new-kit', a: 'alter-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
 const typing = (el) => el && (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'range'));
 document.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
