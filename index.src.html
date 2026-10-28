@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Elixir Kits</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#151714">
+<meta name="description" content="Elixir Kits: make new six-voice drum kits from the LXR-02 drum engine, hear them on a pattern, and save them for Elixir Mobile.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+/*@CSS@*/
+</style>
+
+<main>
+  <header class="top">
+    <b class="title">elixir kits<small>v@VER@</small></b>
+    <span class="kitname" id="kit-name">init</span>
+  </header>
+
+  <section class="card transport">
+    <button class="big" id="play" type="button">play</button>
+    <button class="big" id="new-kit" type="button">new kit</button>
+    <button class="big" id="new-pat" type="button">new pattern</button>
+    <button class="big" id="undo" type="button" disabled>undo</button>
+  </section>
+
+  <section class="card">
+    <div class="head"><span>presets</span><span class="dim" id="preset-count"></span></div>
+    <div class="presets">
+      <button type="button" id="preset-prev" aria-label="Previous preset">‹</button>
+      <select id="preset" aria-label="Preset"></select>
+      <button type="button" id="preset-next" aria-label="Next preset">›</button>
+    </div>
+    <div class="row two">
+      <button type="button" id="import">import kits</button>
+      <button type="button" id="random-preset">random preset</button>
+    </div>
+    <input type="file" id="import-file" accept=".snd,.SND,.json,application/json,application/octet-stream" multiple hidden>
+    <p class="note" id="import-msg">LXR-02 .snd kit files and Elixir / Elixir Mobile preset files (.json) can be imported; they join your saved kits.</p>
+  </section>
+
+  <section class="card">
+    <div class="head"><span>kit</span>
+      <label class="vary">vary <input type="range" id="vary" min="0" max="40" value="10"><output id="vary-out">10%</output></label>
+    </div>
+    <div class="drums" id="drums"></div>
+  </section>
+
+  <section class="card">
+    <div class="head"><span>pattern</span><span class="dim" id="pat-name"></span></div>
+    <div class="grid" id="grid"></div>
+    <div class="ctl">
+      <label>style <select id="style"></select></label>
+      <label>beat <span class="stepper"><button type="button" id="beat-prev" aria-label="Previous beat">‹</button><output id="beat-out"></output><button type="button" id="beat-next" aria-label="Next beat">›</button></span></label>
+      <label>energy <input type="range" id="energy" min="0" max="100" value="60"><output id="energy-out"></output></label>
+      <label>fills <input type="range" id="fills" min="0" max="100" value="40"><output id="fills-out"></output></label>
+      <label>tempo <input type="range" id="tempo" min="60" max="200" value="124"><output id="tempo-out"></output></label>
+      <label>groove <select id="groove"></select></label>
+      <label>depth <input type="range" id="depth" min="0" max="100" value="60"><output id="depth-out"></output></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="head"><span>saved kits</span><span class="dim" id="saved-count"></span></div>
+    <div class="row">
+      <button id="save" type="button">save kit</button>
+      <button id="snd" type="button">download .snd</button>
+      <button id="export" type="button">export for elixir mobile</button>
+    </div>
+    <ul class="saved" id="saved"></ul>
+    <p class="note">Export saves every kit here as <b>elixir-kits.json</b>. On Elixir Mobile, open PRST and press IMPORT to add them as presets (sound only: the phone keeps its own pattern). A .snd file is one kit in the LXR-02's own format.</p>
+  </section>
+</main>
+
+<script id="engine">
+/*@ENGINE@*/
+</script>
+
+<script id="player">
+/*@PLAYER@*/
+</script>
+
+<script>
+/*@APP@*/
+</script>
+</html>
