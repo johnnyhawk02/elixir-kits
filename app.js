@@ -158,6 +158,7 @@ function drawDrums() {
     const row = document.createElement('div'); row.className = 'drum';
     row.innerHTML = `<button class="pad" type="button">${d}<small></small></button><button type="button">new</button><button type="button">alter</button><button class="lock" type="button">lock</button>`;
     const [pad, nw, alt, lock] = row.children;
+    pad.dataset.key = v + 1; pad.title = `Play ${d} (${v + 1})`;
     pad.addEventListener('pointerdown', async () => { await startAudio(); send({ type: 'trig', voice: v, vel: 110 }); flash(v); });
     nw.addEventListener('click', async () => { await startAudio(); remember(); newVoice(v); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
     alt.addEventListener('click', async () => { await startAudio(); remember(); varyVoice(v, 0.1); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
@@ -225,8 +226,17 @@ function newPattern() {
   drawCtl(); generate();
 }
 
-// the grid: tap a step to cycle off, on, accented
+// the grid: tap a step to cycle off, on, accented. With a mouse, dragging across steps gives them the first one's new state.
 const cells = [];
+const cellState = (t, s) => (!pattern.on[t][s] ? 0 : pattern.acc[t][s] ? 2 : 1);
+function setCell(t, s, st) {
+  const P = pattern;
+  if (cellState(t, s) === st && !P.bar[t][s]) return;
+  P.on[t][s] = st ? 1 : 0; P.acc[t][s] = st === 2 ? 1 : 0; P.bar[t][s] = 0;
+  edited = true; drawPattern(); sendSeq();
+}
+let paint = -1;
+window.addEventListener('pointerup', () => { paint = -1; });
 function buildGrid() {
   const grid = $('grid');
   for (let t = 0; t < 7; t++) {
@@ -235,10 +245,14 @@ function buildGrid() {
     for (let s = 0; s < 16; s++) {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'cell' + (s && s % 4 === 0 ? ' q' : '');
       c.setAttribute('aria-label', `${TRACKS[t]} step ${s + 1}`);
-      c.addEventListener('click', () => {
-        const P = pattern;
-        if (!P.on[t][s]) { P.on[t][s] = 1; P.acc[t][s] = 0; P.bar[t][s] = 0; } else if (!P.acc[t][s]) P.acc[t][s] = 1; else { P.on[t][s] = 0; P.acc[t][s] = 0; }
-        edited = true; drawPattern(); sendSeq();
+      c.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'mouse' || e.button) return;
+        paint = (cellState(t, s) + 1) % 3; setCell(t, s, paint);
+      });
+      c.addEventListener('pointerenter', (e) => { if (paint >= 0 && e.buttons & 1) setCell(t, s, paint); });
+      c.addEventListener('click', (e) => {
+        if (e.pointerType === 'mouse') return; // a mouse press is handled on pointerdown
+        setCell(t, s, (cellState(t, s) + 1) % 3);
       });
       grid.append(c); cells[t][s] = c;
     }
@@ -420,6 +434,26 @@ $('undo').addEventListener('click', () => {
   undo = null; $('undo').disabled = true; kitChanged();
 });
 $('vary').addEventListener('input', () => { $('vary-out').textContent = $('vary').value + '%'; });
+
+// ---- keyboard (desktop): space play/stop, k new kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
+const KEYS = { ' ': 'play', k: 'new-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
+const typing = (el) => el && (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'range'));
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (e.target.type === 'range' && k.startsWith('Arrow')) return; // arrows still move a fader
+  if (k >= '1' && k <= '6') {
+    if (e.repeat) return;
+    const v = Number(k) - 1;
+    startAudio().then(() => { send({ type: 'trig', voice: v, vel: 110 }); flash(v); });
+    e.preventDefault(); return;
+  }
+  if (!KEYS[k]) return;
+  e.preventDefault();
+  if (!e.repeat && !$(KEYS[k]).disabled) $(KEYS[k]).click();
+});
+// a space must not also press the button that has focus (the one last clicked)
+document.addEventListener('keyup', (e) => { if (e.key === ' ' && !typing(e.target)) e.preventDefault(); });
 
 buildGrid(); buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
 // start on a fresh kit, so the page always opens on something new

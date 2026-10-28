@@ -65,3 +65,34 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 .presets { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; margin-bottom: 6px; }
 .presets button { min-width: 44px; }
 .row.two { grid-template-columns: repeat(2, 1fr); }
+/* phone: the two columns are only wrappers; the cards stack as before */
+.col { display: contents; }
+.keys { display: none; }
+
+/* mouse: a hover shade, and the keyboard hints */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):not(.on):not(.acc):hover { background: rgba(29, 35, 27, .14); }
+  .cell.on:hover { background: rgba(29, 35, 27, .62); }
+  .big[data-key]::after { content: attr(data-key); display: block; font-size: var(--fs-s); opacity: .55; text-transform: lowercase; margin-top: 2px; }
+  .pad { position: relative; }
+  .pad::after { content: attr(data-key); position: absolute; top: 4px; right: 8px; font-size: var(--fs-s); opacity: .45; }
+  .keys { display: block; color: var(--glass); opacity: .7; font-size: var(--fs-s); text-align: center; margin: 0; grid-column: 1 / -1; }
+}
+
+/* desktop (a laptop's Chrome window): kit on the left, pattern on the right */
+@media (min-width: 1000px) {
+  main { max-width: 1440px; padding: 16px 20px 32px; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 12px 14px; align-items: start; }
+  .top, .transport { grid-column: 1 / -1; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .kitcard { order: -1; }
+  .transport { gap: 10px; }
+  .big { min-height: 60px; }
+  .drum button { min-height: 48px; }
+  .drum button:not(.pad) { padding: 4px 12px; }
+  .vary input { width: 180px; }
+  .grid { gap: 3px; }
+  .cell { min-height: 34px; }
+  .cell.q { margin-left: 6px; }
+  .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+  .ctl label { grid-template-columns: 3.8em minmax(0, 1fr) 5.2em; }
+}

@@ -75,43 +75,78 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
 .presets { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; margin-bottom: 6px; }
 .presets button { min-width: 44px; }
 .row.two { grid-template-columns: repeat(2, 1fr); }
+/* phone: the two columns are only wrappers; the cards stack as before */
+.col { display: contents; }
+.keys { display: none; }
+
+/* mouse: a hover shade, and the keyboard hints */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):not(.on):not(.acc):hover { background: rgba(29, 35, 27, .14); }
+  .cell.on:hover { background: rgba(29, 35, 27, .62); }
+  .big[data-key]::after { content: attr(data-key); display: block; font-size: var(--fs-s); opacity: .55; text-transform: lowercase; margin-top: 2px; }
+  .pad { position: relative; }
+  .pad::after { content: attr(data-key); position: absolute; top: 4px; right: 8px; font-size: var(--fs-s); opacity: .45; }
+  .keys { display: block; color: var(--glass); opacity: .7; font-size: var(--fs-s); text-align: center; margin: 0; grid-column: 1 / -1; }
+}
+
+/* desktop (a laptop's Chrome window): kit on the left, pattern on the right */
+@media (min-width: 1000px) {
+  main { max-width: 1440px; padding: 16px 20px 32px; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: 12px 14px; align-items: start; }
+  .top, .transport { grid-column: 1 / -1; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .kitcard { order: -1; }
+  .transport { gap: 10px; }
+  .big { min-height: 60px; }
+  .drum button { min-height: 48px; }
+  .drum button:not(.pad) { padding: 4px 12px; }
+  .vary input { width: 180px; }
+  .grid { gap: 3px; }
+  .cell { min-height: 34px; }
+  .cell.q { margin-left: 6px; }
+  .ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+  .ctl label { grid-template-columns: 3.8em minmax(0, 1fr) 5.2em; }
+}
 </style>
 
 <main>
   <header class="top">
-    <b class="title">elixir kits<small>v1</small></b>
+    <b class="title">elixir kits<small>v2</small></b>
     <span class="kitname" id="kit-name">init</span>
   </header>
 
   <section class="card transport">
-    <button class="big" id="play" type="button">play</button>
-    <button class="big" id="new-kit" type="button">new kit</button>
-    <button class="big" id="new-pat" type="button">new pattern</button>
-    <button class="big" id="undo" type="button" disabled>undo</button>
+    <button class="big" id="play" type="button" data-key="space" title="Play / stop (space)">play</button>
+    <button class="big" id="new-kit" type="button" data-key="k" title="New kit (k)">new kit</button>
+    <button class="big" id="new-pat" type="button" data-key="p" title="New pattern (p)">new pattern</button>
+    <button class="big" id="undo" type="button" data-key="u" title="Undo (u)" disabled>undo</button>
   </section>
 
-  <section class="card">
+  <div class="col kitcol">
+  <section class="card presetcard">
     <div class="head"><span>presets</span><span class="dim" id="preset-count"></span></div>
     <div class="presets">
-      <button type="button" id="preset-prev" aria-label="Previous preset">‹</button>
+      <button type="button" id="preset-prev" aria-label="Previous preset" title="Previous preset (←)">‹</button>
       <select id="preset" aria-label="Preset"></select>
-      <button type="button" id="preset-next" aria-label="Next preset">›</button>
+      <button type="button" id="preset-next" aria-label="Next preset" title="Next preset (→)">›</button>
     </div>
     <div class="row two">
       <button type="button" id="import">import kits</button>
-      <button type="button" id="random-preset">random preset</button>
+      <button type="button" id="random-preset" title="Random preset (r)">random preset</button>
     </div>
     <input type="file" id="import-file" accept=".snd,.SND,.json,application/json,application/octet-stream" multiple hidden>
     <p class="note" id="import-msg">LXR-02 .snd kit files and Elixir / Elixir Mobile preset files (.json) can be imported; they join your saved kits.</p>
   </section>
 
-  <section class="card">
+  <section class="card kitcard">
     <div class="head"><span>kit</span>
       <label class="vary">vary <input type="range" id="vary" min="0" max="40" value="10"><output id="vary-out">10%</output></label>
     </div>
     <div class="drums" id="drums"></div>
   </section>
 
+  </div>
+
+  <div class="col patcol">
   <section class="card">
     <div class="head"><span>pattern</span><span class="dim" id="pat-name"></span></div>
     <div class="grid" id="grid"></div>
@@ -129,13 +164,15 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 26px; background: var
   <section class="card">
     <div class="head"><span>saved kits</span><span class="dim" id="saved-count"></span></div>
     <div class="row">
-      <button id="save" type="button">save kit</button>
+      <button id="save" type="button" title="Save kit (s)">save kit</button>
       <button id="snd" type="button">download .snd</button>
       <button id="export" type="button">export for elixir mobile</button>
     </div>
     <ul class="saved" id="saved"></ul>
     <p class="note">Export saves every kit here as <b>elixir-kits.json</b>. On Elixir Mobile, open PRST and press IMPORT to add them as presets (sound only: the phone keeps its own pattern). A .snd file is one kit in the LXR-02's own format.</p>
   </section>
+  </div>
+  <p class="keys">keys: space play/stop · k new kit · p new pattern · u undo · s save · 1-6 play a drum · ← → preset · r random preset. drag across the grid to paint steps.</p>
 </main>
 
 <script id="engine">
@@ -4205,6 +4242,7 @@ function drawDrums() {
     const row = document.createElement('div'); row.className = 'drum';
     row.innerHTML = `<button class="pad" type="button">${d}<small></small></button><button type="button">new</button><button type="button">alter</button><button class="lock" type="button">lock</button>`;
     const [pad, nw, alt, lock] = row.children;
+    pad.dataset.key = v + 1; pad.title = `Play ${d} (${v + 1})`;
     pad.addEventListener('pointerdown', async () => { await startAudio(); send({ type: 'trig', voice: v, vel: 110 }); flash(v); });
     nw.addEventListener('click', async () => { await startAudio(); remember(); newVoice(v); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
     alt.addEventListener('click', async () => { await startAudio(); remember(); varyVoice(v, 0.1); kitChanged(); send({ type: 'trig', voice: v, vel: 110 }); });
@@ -4272,8 +4310,17 @@ function newPattern() {
   drawCtl(); generate();
 }
 
-// the grid: tap a step to cycle off, on, accented
+// the grid: tap a step to cycle off, on, accented. With a mouse, dragging across steps gives them the first one's new state.
 const cells = [];
+const cellState = (t, s) => (!pattern.on[t][s] ? 0 : pattern.acc[t][s] ? 2 : 1);
+function setCell(t, s, st) {
+  const P = pattern;
+  if (cellState(t, s) === st && !P.bar[t][s]) return;
+  P.on[t][s] = st ? 1 : 0; P.acc[t][s] = st === 2 ? 1 : 0; P.bar[t][s] = 0;
+  edited = true; drawPattern(); sendSeq();
+}
+let paint = -1;
+window.addEventListener('pointerup', () => { paint = -1; });
 function buildGrid() {
   const grid = $('grid');
   for (let t = 0; t < 7; t++) {
@@ -4282,10 +4329,14 @@ function buildGrid() {
     for (let s = 0; s < 16; s++) {
       const c = document.createElement('button'); c.type = 'button'; c.className = 'cell' + (s && s % 4 === 0 ? ' q' : '');
       c.setAttribute('aria-label', `${TRACKS[t]} step ${s + 1}`);
-      c.addEventListener('click', () => {
-        const P = pattern;
-        if (!P.on[t][s]) { P.on[t][s] = 1; P.acc[t][s] = 0; P.bar[t][s] = 0; } else if (!P.acc[t][s]) P.acc[t][s] = 1; else { P.on[t][s] = 0; P.acc[t][s] = 0; }
-        edited = true; drawPattern(); sendSeq();
+      c.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'mouse' || e.button) return;
+        paint = (cellState(t, s) + 1) % 3; setCell(t, s, paint);
+      });
+      c.addEventListener('pointerenter', (e) => { if (paint >= 0 && e.buttons & 1) setCell(t, s, paint); });
+      c.addEventListener('click', (e) => {
+        if (e.pointerType === 'mouse') return; // a mouse press is handled on pointerdown
+        setCell(t, s, (cellState(t, s) + 1) % 3);
       });
       grid.append(c); cells[t][s] = c;
     }
@@ -4467,6 +4518,26 @@ $('undo').addEventListener('click', () => {
   undo = null; $('undo').disabled = true; kitChanged();
 });
 $('vary').addEventListener('input', () => { $('vary-out').textContent = $('vary').value + '%'; });
+
+// ---- keyboard (desktop): space play/stop, k new kit, p new pattern, u undo, s save, 1-6 drums, ← → presets, r random ----
+const KEYS = { ' ': 'play', k: 'new-kit', p: 'new-pat', u: 'undo', s: 'save', r: 'random-preset', ArrowLeft: 'preset-prev', ArrowRight: 'preset-next' };
+const typing = (el) => el && (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'range'));
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (e.target.type === 'range' && k.startsWith('Arrow')) return; // arrows still move a fader
+  if (k >= '1' && k <= '6') {
+    if (e.repeat) return;
+    const v = Number(k) - 1;
+    startAudio().then(() => { send({ type: 'trig', voice: v, vel: 110 }); flash(v); });
+    e.preventDefault(); return;
+  }
+  if (!KEYS[k]) return;
+  e.preventDefault();
+  if (!e.repeat && !$(KEYS[k]).disabled) $(KEYS[k]).click();
+});
+// a space must not also press the button that has focus (the one last clicked)
+document.addEventListener('keyup', (e) => { if (e.key === ' ' && !typing(e.target)) e.preventDefault(); });
 
 buildGrid(); buildCtl(); drawCtl(); generate(); drawDrums(); drawSaved();
 // start on a fresh kit, so the page always opens on something new
